@@ -1,15 +1,10 @@
 #include <array>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <string>
 
-std::string exec_command(const std::string &command);
-
-void error(const std::string &msg);
-
-int main(int argc, char *argv[]) {
-    std::cout << exec_command(argv[1]) << std::endl;
-}
+const char USAGE[] = "Usage: hyprgrab screenshot/screencast [flags]";
 
 void error(const std::string &msg) {
     std::cerr << msg << std::endl;
@@ -37,3 +32,66 @@ std::string exec_command(const std::string &command) {
     }
     return result;
 }
+
+enum RegionMode {
+    OUTPUT,
+    WINDOW,
+    REGION
+};
+
+struct Args {
+    bool video;
+    RegionMode regionMode = OUTPUT;
+};
+
+std::string read_arg(int i, int argc, char *argv[]) {
+    if (i >= argc) error("Expected argument");
+    return std::string(argv[i]);
+}
+
+Args parse_args(int argc, char *argv[]) {
+    Args args;
+
+    // Get subcomand
+    if (argc < 2) error(USAGE);
+    
+    const auto mode = std::string(argv[1]);
+    if (mode == "screenshot") {
+        args.video = false;
+    } else if (mode == "screencast") {
+        args.video = true;
+    } else {
+        error("Invalid mode. Valid values are: screenshot, screencast");
+    }
+
+    // Get flags
+    for (int i = 2; i < argc; i++) {
+        // All flags are -x
+        const auto flag = std::string(argv[i]);
+        if (flag.size() != 2 || flag[0] != '-')
+            error(std::format("Unknown flag '{}'", flag));
+
+        // Flags here
+        switch (flag[1]) {
+            case 'm': {
+                // Read mode
+                const auto arg = read_arg(++i, argc, argv);
+                if (arg == "output") args.regionMode = OUTPUT;
+                else if (arg == "window") args.regionMode = WINDOW;
+                else if (arg == "region") args.regionMode = REGION;
+                else error(std::format("Unknown region mode '{}'", arg));
+                break;
+            }
+
+            default: error(std::format("Unknown flag '{}'", flag));
+        }
+    }
+
+    return args;
+}
+
+int main(int argc, char *argv[]) {
+    Args args = parse_args(argc, argv);
+}
+
+
