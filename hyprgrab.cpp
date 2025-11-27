@@ -1,13 +1,15 @@
+#include <array>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 // Globals
 struct sockaddr_un HYPRLAND_SOCKET_ADDR;
@@ -17,13 +19,15 @@ char big_buffer[256];
 // Write to the hyprland socket and read output back
 std::string hyprctl(const std::string &command);
 
+std::string exec_command(const std::string &command);
+
 void global_init();
 
 void error(const std::string &msg);
 
 int main(int argc, char *argv[]) {
     global_init();
-    std::cout << hyprctl(argv[1]) << std::endl;
+    std::cout << exec_command(argv[1]) << std::endl;
 }
 
 void error(const std::string &msg) {
@@ -71,7 +75,7 @@ std::string hyprctl(const std::string &command) {
     std::string output;
     while (true) {
         ssize_t read_size = recv(fd, big_buffer, sizeof(big_buffer) - 1, 0);
-        
+
         if (read_size == -1) {
             // Check errno
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -94,6 +98,27 @@ std::string hyprctl(const std::string &command) {
 
     close(fd);
 
-    return output; 
+    return output;
 }
 
+std::string exec_command(const std::string &command) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, void (*)(FILE *)> pipe(popen(command.c_str(), "r"),
+                                                 [](FILE *f) -> void {
+                                                     // wrapper to ignore the
+                                                     // return value from
+                                                     // pclose() is needed with
+                                                     // newer versions of gnu
+                                                     // g++
+                                                     std::ignore = pclose(f);
+                                                 });
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) !=
+           nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
