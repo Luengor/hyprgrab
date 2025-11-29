@@ -215,14 +215,24 @@ std::string get_region(const Args &args) {
 
 std::filesystem::path get_output_path(const Args &args) {
     // Join the output folder with the file name
+    std::filesystem::path out_dir_path = args.output_directory; 
     auto now = time(NULL);
     std::string filename =
         std::format("hyprgrab_{}_{}.{}", args.video ? "cast" : "shot", now,
                     args.video ? "mp4" : "png");
 
-    auto output_path = args.output_directory;
-    output_path.append(filename);
-    return output_path;
+    out_dir_path.append(filename);
+
+    // Resolve output_directory if needed
+    std::string out_dir = out_dir_path; 
+    if (out_dir.starts_with('~')) {
+        const char *home = std::getenv("HOME");
+        if (!home) error("$HOME is not set");
+        out_dir_path = home;
+        out_dir_path.append(out_dir.substr(2));
+    }
+
+    return out_dir_path;
 }
 
 void screenshot(const Args &args) {
