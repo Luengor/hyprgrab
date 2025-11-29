@@ -70,7 +70,7 @@ struct Args {
     std::string terminal = "kitty --title hyprgrab-recorder";
     std::filesystem::path output_directory;
     std::filesystem::path output_path;
-    int delay_seconds;
+    int delay_seconds = 0;
 };
 
 std::string read_arg(int i, int argc, char *argv[], bool lower = false) {
@@ -244,15 +244,18 @@ void screencast(const Args &args) {
 
     // Execute screenrecording command
     std::string command = std::format(
-        "echo 'Waiting first...';"
-        "sleep {};"
         "echo 'Recording... Press Ctrl+C to stop.';"
-        "wl-screenrec -g '{}' -f '{}';", args.delay_seconds > 0 ? args.delay_seconds : 0,
-        args.region, args.output_path.string(), args.output_path.string());
+        "wl-screenrec -g '{}' -f '{}';",
+        args.region, args.output_path.string());
+
+    if (args.delay_seconds > 0) {
+        command = std::format(
+            "echo 'Waiting {} {}...';sleep {};", args.delay_seconds,
+            args.delay_seconds == 1 ? "second" : "seconds", args.delay_seconds) + command;
+    }
 
     std::string final_cmd = std::format("{} -e sh -c \"{}\" &",
                                         terminal, command);
-    std::cout << final_cmd << std::endl;
 
     int result = std::system(final_cmd.c_str());
 
