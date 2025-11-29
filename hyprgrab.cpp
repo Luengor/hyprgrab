@@ -61,6 +61,12 @@ std::string exec_command(const std::string &command) {
     return result.substr(0, result.size() - 1);
 }
 
+std::string escape_for_shell(std::string text) {
+    std::replace(text.begin(), text.end(), '\'', ' ');
+    std::replace(text.begin(), text.end(), '\"', ' ');
+    return text;
+}
+
 enum RegionMode { OUTPUT, WINDOW, REGION };
 
 struct Args {
@@ -198,7 +204,7 @@ std::string get_region(const Args &args) {
                       client["workspace"]["id"]) != workspaces.end()) {
             const auto &at = client["at"];
             const auto &size = client["size"];
-            const std::string title = client["title"];
+            const std::string title = escape_for_shell(client["title"]);
             boxes.push_back(std::format("{},{} {}x{} \"{}\"", (int)at[0],
                                         (int)at[1], (int)size[0], (int)size[1],
                                         title));
