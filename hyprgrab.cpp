@@ -202,10 +202,14 @@ std::string get_region(const Args &args) {
     auto clients = json::parse(exec_command("hyprctl clients -j"));
     std::vector<std::string> boxes;
     for (auto &client : clients) {
-        if (std::find(workspaces.begin(), workspaces.end(),
-                      client["workspace"]["id"]) != workspaces.end()) {
-            const auto &at = client["at"];
-            const auto &size = client["size"];
+        bool is_on_active_workspace =
+            std::ranges::any_of(workspaces, [&](int id) {
+                return id == client["workspace"]["id"];
+            });
+
+        if (is_on_active_workspace) {
+            auto [x, y] = client["at"].get<std::pair<int, int>>();
+            auto [w, h] = client["size"].get<std::pair<int, int>>();
             boxes.push_back(std::format("{},{} {}x{}", x, y, w, h));
         }
     }
