@@ -103,7 +103,7 @@ std::string get_region(const Args &args) {
     // If region just throw it to slurp
     if (args.regionMode == REGION) {
         // Slurp
-        return exec_command("slurp");
+        return exec_command("slurp -d");
     }
 
     // If output, make slurp get it
