@@ -67,7 +67,7 @@ struct Args {
     bool video;
     RegionMode regionMode = OUTPUT;
     std::string region;
-    std::string terminal = "kitty --title \"%NAME%\"";
+    std::string terminal = "kitty --title hyprgrab-recorder";
     std::filesystem::path output_directory;
     std::filesystem::path output_path;
     int delay_seconds;
