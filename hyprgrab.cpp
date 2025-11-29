@@ -69,6 +69,11 @@ std::string escape_for_shell(std::string text) {
     return text;
 }
 
+void notify(const std::string &msg) {
+    std::string cmd = std::format("notify-send 'Hyprgrab' '{}'", msg);
+    exec_command(cmd);
+}
+
 enum RegionMode { OUTPUT, WINDOW, REGION };
 
 struct Args {
@@ -276,7 +281,7 @@ void screencast(const Args &args) {
     }
 
     std::string final_cmd =
-        std::format("{} -e sh -c \"{}\" &", terminal, command);
+        std::format("{} -e sh -c \"{}\"", terminal, command);
 
     int result = std::system(final_cmd.c_str());
 
@@ -301,5 +306,5 @@ int main(int argc, char *argv[]) {
     else
         screenshot(args);
 
-    std::cout << "done!" << std::endl;
+    notify("Done!");
 }
