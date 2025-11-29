@@ -1,8 +1,11 @@
+#include <algorithm>
 #include <array>
 #include <format>
 #include <iostream>
 #include <memory>
 #include <string>
+#include "json.hpp"
+using json = nlohmann::json;
 
 const char USAGE[] = "Usage: hyprgrab screenshot/screencast [flags]";
 
@@ -30,7 +33,7 @@ std::string exec_command(const std::string &command) {
            nullptr) {
         result += buffer.data();
     }
-    return result;
+    return result.substr(0, result.size() - 1);
 }
 
 enum RegionMode {
@@ -42,6 +45,7 @@ enum RegionMode {
 struct Args {
     bool video;
     RegionMode regionMode = OUTPUT;
+    std::string region;
 };
 
 std::string read_arg(int i, int argc, char *argv[]) {
@@ -90,8 +94,51 @@ Args parse_args(int argc, char *argv[]) {
     return args;
 }
 
+std::string get_region(const Args &args) {
+    // If region just throw it to slurp
+    if (args.regionMode == REGION) {
+        // Slurp
+        return exec_command("slurp");
+    }
+
+    // If output, make slurp get it
+    else if (args.regionMode == OUTPUT) {
+        return exec_command("slurp -o -r");
+    }
+
+    // If not, get the monitors to get the active workspaces
+    auto monitors = json::parse(exec_command("hyprctl monitors -j"));
+    std::vector<int> workspaces;
+    workspaces.reserve(monitors.size());
+
+    for (const auto &monitor : monitors)
+        workspaces.push_back(monitor["activeWorkspace"]["id"]);
+
+    // Now, all the clients on those workspaces
+    auto clients = json::parse(exec_command("hyprctl clients -j"));
+    std::vector<std::string> boxes;
+    for (auto &client : clients) {
+        if (std::find(workspaces.begin(), workspaces.end(),
+                      client["workspace"]["id"]) != workspaces.end()) {
+            const auto &at = client["at"];
+            const auto &size = client["size"];
+            const std::string title = client["title"];
+            boxes.push_back(std::format("{},{} {}x{} \"{}\"", (int)at[0], (int)at[1],
+                                        (int)size[0], (int)size[1], title));
+        }
+    }
+
+    std::string boxes_text = boxes[0];
+    for (unsigned i = 1; i < boxes.size(); i++) {
+        boxes_text += '\n' + boxes[i];
+    }
+
+    return exec_command(std::format("slurp -r <<< '{}'", boxes_text));
+}
+
 int main(int argc, char *argv[]) {
     Args args = parse_args(argc, argv);
+    args.region = get_region(args);
 }
 
 
