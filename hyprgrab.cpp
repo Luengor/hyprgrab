@@ -10,7 +10,8 @@
 #include <string>
 using json = nlohmann::json;
 
-#define RECORDING_TITLE "hyprgrab-recording"
+constexpr char RECORDING_TITLE[] = "hyprgrab-recording";
+
 const char USAGE[] = "Usage: hyprgrab screenshot|screencast [options]";
 const char HELP[] = R"(Usage: hyprgrab screenshot|screencast [options]
 
@@ -22,11 +23,11 @@ with the name 'hyprgrab_{shot|cast}_{time}.{ext}' in the chosen folder.
 
 
 Options:
+  -h        show this help message
+  -m        one of: output, window, region
   -o        directory in which to save result. ~/{Pictures|Videos} by default.
   -t        command to open a named terminal when recording. Default is
             'kitty --title "%NAME%"'
-  -h        show this help message
-  -m        one of: output, window, region
 
 Modes:
   output:   take screenshot of an entire monitor (default)
@@ -230,10 +231,10 @@ void screencast(const Args &args) {
 
     const std::string rules_cmd =
         std::format("hyprctl --batch '"
-                    "keyword windowrule float, title:^({})$;"
-                    "keyword windowrule size 500 100, title:^({})$;"
-                    "keyword windowrule pin, title:^({})$;'",
-                    RECORDING_TITLE, RECORDING_TITLE, RECORDING_TITLE);
+                    "keyword windowrule float, title:^({})$; "
+                    "keyword windowrule pin, title:^({})$; "
+                    "'",
+                    RECORDING_TITLE, RECORDING_TITLE);
     std::cout << exec_command(rules_cmd) << std::endl;
 
     // Execute screenrecording command
