@@ -8,9 +8,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unistd.h>
 using json = nlohmann::json;
-
-constexpr char RECORDING_TITLE[] = "hyprgrab-recording";
 
 const char USAGE[] = "Usage: hyprgrab screenshot|screencast [options]";
 const char HELP[] = R"(Usage: hyprgrab screenshot|screencast [options]
@@ -21,13 +20,18 @@ It will use hyprctl and slurp for region selection, then grim or wl-screenrec
 to take the screenshot or record the screen. The result file will be stored
 with the name 'hyprgrab_{shot|cast}_{time}.{ext}' in the chosen folder.
 
+When recording, a new terminal window will be opened with the title
+"hyprgrab-recorder". I recomend adding some rules to make the window float
+in your Hyprland config like this:
+  windowrulev2 = float, title: ^(hyprgrab-recorder)$
 
 Options:
   -h        show this help message
   -m        one of: output, window, region
-  -o        directory in which to save result. ~/{Pictures|Videos} by default.
+  -o        directory in which to save result. ~/{Pictures|Videos} by default
+  -s        seconds to sleep before taking the screenshot/recording
   -t        command to open a named terminal when recording. Default is
-            'kitty --title "%NAME%"'
+            'kitty --title "hyprgrab-recorder"'
 
 Modes:
   output:   take screenshot of an entire monitor (default)
@@ -66,6 +70,7 @@ struct Args {
     std::string terminal = "kitty --title \"%NAME%\"";
     std::filesystem::path output_directory;
     std::filesystem::path output_path;
+    int delay_seconds;
 };
 
 std::string read_arg(int i, int argc, char *argv[], bool lower = false) {
@@ -149,6 +154,14 @@ Args parse_args(int argc, char *argv[]) {
                     break;
                 }
 
+            case 's':
+                {
+                    // Set sleep time
+                    const auto arg = read_arg(++i, argc, argv);
+                    args.delay_seconds = std::stoi(arg);
+                    break;
+                }
+
             default:
                 error(std::format("Unknown flag '{}'", flag));
         }
@@ -213,6 +226,10 @@ std::filesystem::path get_output_path(const Args &args) {
 }
 
 void screenshot(const Args &args) {
+    // Sleep if needed
+    if (args.delay_seconds > 0)
+        sleep(args.delay_seconds);
+
     // Save screenshot to output path
     exec_command(
         std::format("grim -g '{}' {}", args.region, args.output_path.string()));
@@ -224,23 +241,13 @@ void screenshot(const Args &args) {
 void screencast(const Args &args) {
     // Get terminal from args or from env if not set
     std::string terminal = args.terminal;
-    if (terminal.find("%NAME%") != terminal.npos) {
-        int index = terminal.find("%NAME%");
-        terminal.replace(index, 6, RECORDING_TITLE);
-    }
-
-    const std::string rules_cmd =
-        std::format("hyprctl --batch '"
-                    "keyword windowrule float, title:^({})$; "
-                    "keyword windowrule pin, title:^({})$; "
-                    "'",
-                    RECORDING_TITLE, RECORDING_TITLE);
-    std::cout << exec_command(rules_cmd) << std::endl;
 
     // Execute screenrecording command
     std::string command = std::format(
+        "echo 'Waiting first...';"
+        "sleep {};"
         "echo 'Recording... Press Ctrl+C to stop.';"
-        "wl-screenrec -g '{}' -f '{}';",
+        "wl-screenrec -g '{}' -f '{}';", args.delay_seconds > 0 ? args.delay_seconds : 0,
         args.region, args.output_path.string(), args.output_path.string());
 
     std::string final_cmd = std::format("{} -e sh -c \"{}\" &",
@@ -269,4 +276,6 @@ int main(int argc, char *argv[]) {
         screencast(args);
     else
         screenshot(args);
+
+    std::cout << "done!" << std::endl;
 }
