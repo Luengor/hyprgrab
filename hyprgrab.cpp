@@ -48,9 +48,14 @@ struct Args {
     std::string region;
 };
 
-std::string read_arg(int i, int argc, char *argv[]) {
+std::string read_arg(int i, int argc, char *argv[], bool lower = false) {
     if (i >= argc) error("Expected argument");
-    return std::string(argv[i]);
+    auto str = std::string(argv[i]);
+    if (!lower) return str;
+
+    std::transform(str.begin(), str.end(), str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return str;
 }
 
 Args parse_args(int argc, char *argv[]) {
@@ -79,7 +84,7 @@ Args parse_args(int argc, char *argv[]) {
         switch (flag[1]) {
             case 'm': {
                 // Read mode
-                const auto arg = read_arg(++i, argc, argv);
+                const auto arg = read_arg(++i, argc, argv, true);
                 if (arg == "output") args.regionMode = OUTPUT;
                 else if (arg == "window") args.regionMode = WINDOW;
                 else if (arg == "region") args.regionMode = REGION;
