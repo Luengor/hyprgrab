@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <unistd.h>
 using json = nlohmann::json;
 
@@ -283,11 +284,7 @@ void screencast(const Args &args) {
     std::string final_cmd =
         std::format("{} -e sh -c \"{}\"", terminal, command);
 
-    int result = std::system(final_cmd.c_str());
-
-    if (result != 0) {
-        error("Failed to launch recording");
-    }
+    std::ignore = exec_command(final_cmd.c_str());
 }
 
 int main(int argc, char *argv[]) {
