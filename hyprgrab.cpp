@@ -141,9 +141,26 @@ std::string get_region(const Args &args) {
     return exec_command(std::format("slurp -r <<< '{}'", boxes_text));
 }
 
-int main(int argc, char *argv[]) {
-    Args args = parse_args(argc, argv);
-    args.region = get_region(args);
+void screenshot(const Args &args) {
+    exec_command(std::format("grim -g '{}' - | wl-copy", args.region));
 }
 
+void screencast(const Args &args) {
+    error("TODO");
+}
+
+int main(int argc, char *argv[]) {
+    // Get the args and region and things
+    Args args = parse_args(argc, argv);
+    args.region = get_region(args);
+
+    if (args.region == "")
+        return 0;
+
+    // Execute the command
+    if (args.video)
+        screencast(args);
+    else
+        screenshot(args);
+}
 
