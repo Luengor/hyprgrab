@@ -17,15 +17,10 @@ void error(const std::string &msg) {
 std::string exec_command(const std::string &command) {
     std::array<char, 128> buffer;
     std::string result;
-    std::unique_ptr<FILE, void (*)(FILE *)> pipe(popen(command.c_str(), "r"),
-                                                 [](FILE *f) -> void {
-                                                     // wrapper to ignore the
-                                                     // return value from
-                                                     // pclose() is needed with
-                                                     // newer versions of gnu
-                                                     // g++
-                                                     std::ignore = pclose(f);
-                                                 });
+    std::unique_ptr<FILE, void (*)(FILE *)> pipe(
+        popen(command.c_str(), "r"),
+        [](FILE *f) -> void { std::ignore = pclose(f); });
+
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }
