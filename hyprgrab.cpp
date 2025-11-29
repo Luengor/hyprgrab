@@ -58,7 +58,9 @@ std::string exec_command(const std::string &command) {
            nullptr) {
         result += buffer.data();
     }
-    return result.substr(0, result.size() - 1);
+    if (!result.empty() && result.back() == '\n')
+        result.pop_back();
+    return result; 
 }
 
 std::string escape_for_shell(std::string text) {
