@@ -1,25 +1,30 @@
+#include "json.hpp"
 #include <algorithm>
 #include <array>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <format>
 #include <iostream>
 #include <memory>
 #include <string>
-#include "json.hpp"
 using json = nlohmann::json;
 
+#define RECORDING_TITLE "hyprgrab-recording"
 const char USAGE[] = "Usage: hyprgrab screenshot|screencast [options]";
 const char HELP[] = R"(Usage: hyprgrab screenshot|screencast [options]
 
 Hyprgrab is a small utility program to easily capture the screen in Hyprland.
 
 It will use hyprctl and slurp for region selection, then grim or wl-screenrec
-to take the screenshot or record the screen. The result file will be stored 
+to take the screenshot or record the screen. The result file will be stored
 with the name 'hyprgrab_{shot|cast}_{time}.{ext}' in the chosen folder.
 
 
 Options:
   -o        directory in which to save result. ~/{Pictures|Videos} by default.
+  -t        command to open a named terminal when recording. Default is
+            'kitty --title "%NAME%"'
   -h        show this help message
   -m        one of: output, window, region
 
@@ -50,25 +55,24 @@ std::string exec_command(const std::string &command) {
     }
     return result.substr(0, result.size() - 1);
 }
-    
-enum RegionMode {
-    OUTPUT,
-    WINDOW,
-    REGION
-};
+
+enum RegionMode { OUTPUT, WINDOW, REGION };
 
 struct Args {
     bool video;
     RegionMode regionMode = OUTPUT;
     std::string region;
+    std::string terminal = "kitty --title \"%NAME%\"";
     std::filesystem::path output_directory;
     std::filesystem::path output_path;
 };
 
 std::string read_arg(int i, int argc, char *argv[], bool lower = false) {
-    if (i >= argc) error("Expected argument");
+    if (i >= argc)
+        error("Expected argument");
     auto str = std::string(argv[i]);
-    if (!lower) return str;
+    if (!lower)
+        return str;
 
     std::transform(str.begin(), str.end(), str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
@@ -79,8 +83,9 @@ Args parse_args(int argc, char *argv[]) {
     Args args;
 
     // Get subcomand
-    if (argc < 2) error(USAGE);
-    
+    if (argc < 2)
+        error(USAGE);
+
     const auto mode = std::string(argv[1]);
     if (mode == "screenshot") {
         args.video = false;
@@ -104,29 +109,47 @@ Args parse_args(int argc, char *argv[]) {
 
         // Flags here
         switch (flag[1]) {
-            case 'm': {
-                // Read mode
-                const auto arg = read_arg(++i, argc, argv, true);
-                if (arg == "output") args.regionMode = OUTPUT;
-                else if (arg == "window") args.regionMode = WINDOW;
-                else if (arg == "region") args.regionMode = REGION;
-                else error(std::format("Unknown region mode '{}'", arg));
-                break;
-            }
+            case 'm':
+                {
+                    // Read mode
+                    const auto arg = read_arg(++i, argc, argv, true);
+                    if (arg == "output")
+                        args.regionMode = OUTPUT;
+                    else if (arg == "window")
+                        args.regionMode = WINDOW;
+                    else if (arg == "region")
+                        args.regionMode = REGION;
+                    else
+                        error(std::format("Unknown region mode '{}'", arg));
+                    break;
+                }
 
-            case 'h': {
-                // Show help and exit
-                std::cout << HELP;
-                exit(0);
-            }
+            case 'h':
+                {
+                    // Show help and exit
+                    std::cout << HELP;
+                    exit(0);
+                    break;
+                }
 
-            case 'o': {
-                // Set output directory
-                const auto arg = read_arg(++i, argc, argv);
-                args.output_directory = arg;
-            }
+            case 'o':
+                {
+                    // Set output directory
+                    const auto arg = read_arg(++i, argc, argv);
+                    args.output_directory = arg;
+                    break;
+                }
 
-            default: error(std::format("Unknown flag '{}'", flag));
+            case 't':
+                {
+                    // Set terminal
+                    const auto arg = read_arg(++i, argc, argv);
+                    args.terminal = arg;
+                    break;
+                }
+
+            default:
+                error(std::format("Unknown flag '{}'", flag));
         }
     }
 
@@ -162,8 +185,9 @@ std::string get_region(const Args &args) {
             const auto &at = client["at"];
             const auto &size = client["size"];
             const std::string title = client["title"];
-            boxes.push_back(std::format("{},{} {}x{} \"{}\"", (int)at[0], (int)at[1],
-                                        (int)size[0], (int)size[1], title));
+            boxes.push_back(std::format("{},{} {}x{} \"{}\"", (int)at[0],
+                                        (int)at[1], (int)size[0], (int)size[1],
+                                        title));
         }
     }
 
@@ -178,28 +202,55 @@ std::string get_region(const Args &args) {
 std::filesystem::path get_output_path(const Args &args) {
     // Join the output folder with the file name
     auto now = time(NULL);
-    std::string filename = std::format(
-            "hyprgrab_{}_{}.{}",
-            args.video ? "cast" : "shot",
-            now,
-            args.video ? "mp4" : "png"
-    );
+    std::string filename =
+        std::format("hyprgrab_{}_{}.{}", args.video ? "cast" : "shot", now,
+                    args.video ? "mp4" : "png");
 
     auto output_path = args.output_directory;
     output_path.append(filename);
-    return output_path; 
+    return output_path;
 }
 
 void screenshot(const Args &args) {
     // Save screenshot to output path
-    exec_command(std::format("grim -g '{}' {}", args.region, args.output_path.string()));
+    exec_command(
+        std::format("grim -g '{}' {}", args.region, args.output_path.string()));
 
     // Copy to clipboard
     exec_command(std::format("wl-copy < {}", args.output_path.string()));
 }
 
 void screencast(const Args &args) {
-    error("TODO");
+    // Get terminal from args or from env if not set
+    std::string terminal = args.terminal;
+    if (terminal.find("%NAME%") != terminal.npos) {
+        int index = terminal.find("%NAME%");
+        terminal.replace(index, 6, RECORDING_TITLE);
+    }
+
+    const std::string rules_cmd =
+        std::format("hyprctl --batch '"
+                    "keyword windowrule float, title:^({})$;"
+                    "keyword windowrule size 500 100, title:^({})$;"
+                    "keyword windowrule pin, title:^({})$;'",
+                    RECORDING_TITLE, RECORDING_TITLE, RECORDING_TITLE);
+    std::cout << exec_command(rules_cmd) << std::endl;
+
+    // Execute screenrecording command
+    std::string command = std::format(
+        "echo 'Recording... Press Ctrl+C to stop.';"
+        "wl-screenrec -g '{}' -f '{}';",
+        args.region, args.output_path.string(), args.output_path.string());
+
+    std::string final_cmd = std::format("{} -e sh -c \"{}\" &",
+                                        terminal, command);
+    std::cout << final_cmd << std::endl;
+
+    int result = std::system(final_cmd.c_str());
+
+    if (result != 0) {
+        error("Failed to launch recording");
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -218,4 +269,3 @@ int main(int argc, char *argv[]) {
     else
         screenshot(args);
 }
-
