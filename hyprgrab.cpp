@@ -64,12 +64,6 @@ std::string exec_command(const std::string &command) {
     return result;
 }
 
-std::string escape_for_shell(std::string text) {
-    std::replace(text.begin(), text.end(), '\'', ' ');
-    std::replace(text.begin(), text.end(), '\"', ' ');
-    return text;
-}
-
 void notify(const std::string &msg) {
     std::string cmd = std::format("notify-send 'Hyprgrab' '{}'", msg);
     exec_command(cmd);
@@ -212,10 +206,7 @@ std::string get_region(const Args &args) {
                       client["workspace"]["id"]) != workspaces.end()) {
             const auto &at = client["at"];
             const auto &size = client["size"];
-            const std::string title = escape_for_shell(client["title"]);
-            boxes.push_back(std::format("{},{} {}x{} \"{}\"", (int)at[0],
-                                        (int)at[1], (int)size[0], (int)size[1],
-                                        title));
+            boxes.push_back(std::format("{},{} {}x{}", x, y, w, h));
         }
     }
 
