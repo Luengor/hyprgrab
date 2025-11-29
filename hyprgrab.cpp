@@ -60,7 +60,7 @@ std::string exec_command(const std::string &command) {
     }
     if (!result.empty() && result.back() == '\n')
         result.pop_back();
-    return result; 
+    return result;
 }
 
 std::string escape_for_shell(std::string text) {
@@ -223,7 +223,7 @@ std::string get_region(const Args &args) {
 
 std::filesystem::path get_output_path(const Args &args) {
     // Join the output folder with the file name
-    std::filesystem::path out_dir_path = args.output_directory; 
+    std::filesystem::path out_dir_path = args.output_directory;
     auto now = time(NULL);
     std::string filename =
         std::format("hyprgrab_{}_{}.{}", args.video ? "cast" : "shot", now,
@@ -232,10 +232,11 @@ std::filesystem::path get_output_path(const Args &args) {
     out_dir_path.append(filename);
 
     // Resolve output_directory if needed
-    std::string out_dir = out_dir_path; 
+    std::string out_dir = out_dir_path;
     if (out_dir.starts_with('~')) {
         const char *home = std::getenv("HOME");
-        if (!home) error("$HOME is not set");
+        if (!home)
+            error("$HOME is not set");
         out_dir_path = home;
         out_dir_path.append(out_dir.substr(2));
     }
@@ -261,19 +262,21 @@ void screencast(const Args &args) {
     std::string terminal = args.terminal;
 
     // Execute screenrecording command
-    std::string command = std::format(
-        "echo 'Recording... Press Ctrl+C to stop.';"
-        "wl-screenrec -g '{}' -f '{}';",
-        args.region, args.output_path.string());
+    std::string command =
+        std::format("echo 'Recording... Press Ctrl+C to stop.';"
+                    "wl-screenrec -g '{}' -f '{}';",
+                    args.region, args.output_path.string());
 
     if (args.delay_seconds > 0) {
-        command = std::format(
-            "echo 'Waiting {} {}...';sleep {};", args.delay_seconds,
-            args.delay_seconds == 1 ? "second" : "seconds", args.delay_seconds) + command;
+        command =
+            std::format("echo 'Waiting {} {}...';sleep {};", args.delay_seconds,
+                        args.delay_seconds == 1 ? "second" : "seconds",
+                        args.delay_seconds) +
+            command;
     }
 
-    std::string final_cmd = std::format("{} -e sh -c \"{}\" &",
-                                        terminal, command);
+    std::string final_cmd =
+        std::format("{} -e sh -c \"{}\" &", terminal, command);
 
     int result = std::system(final_cmd.c_str());
 
