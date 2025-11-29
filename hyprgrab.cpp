@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <filesystem>
 #include <format>
 #include <iostream>
 #include <memory>
@@ -13,9 +14,12 @@ const char HELP[] = R"(Usage: hyprgrab screenshot|screencast [options]
 Hyprgrab is a small utility program to easily capture the screen in Hyprland.
 
 It will use hyprctl and slurp for region selection, then grim or wl-screenrec
-to take the screenshot or record the screen.
+to take the screenshot or record the screen. The result file will be stored 
+with the name 'hyprgrab_{shot|cast}_{time}.{ext}' in the chosen folder.
+
 
 Options:
+  -o        directory in which to save result. ~/{Pictures|Videos} by default.
   -h        show this help message
   -m        one of: output, window, region
 
@@ -57,6 +61,8 @@ struct Args {
     bool video;
     RegionMode regionMode = OUTPUT;
     std::string region;
+    std::filesystem::path output_directory;
+    std::filesystem::path output_path;
 };
 
 std::string read_arg(int i, int argc, char *argv[], bool lower = false) {
@@ -78,8 +84,10 @@ Args parse_args(int argc, char *argv[]) {
     const auto mode = std::string(argv[1]);
     if (mode == "screenshot") {
         args.video = false;
+        args.output_directory = "~/Pictures";
     } else if (mode == "screencast") {
         args.video = true;
+        args.output_directory = "~/Videos";
     } else if (mode == "-h") {
         std::cout << HELP;
         exit(0);
@@ -110,6 +118,12 @@ Args parse_args(int argc, char *argv[]) {
                 // Show help and exit
                 std::cout << HELP;
                 exit(0);
+            }
+
+            case 'o': {
+                // Set output directory
+                const auto arg = read_arg(++i, argc, argv);
+                args.output_directory = arg;
             }
 
             default: error(std::format("Unknown flag '{}'", flag));
@@ -161,8 +175,27 @@ std::string get_region(const Args &args) {
     return exec_command(std::format("slurp -r <<< '{}'", boxes_text));
 }
 
+std::filesystem::path get_output_path(const Args &args) {
+    // Join the output folder with the file name
+    auto now = time(NULL);
+    std::string filename = std::format(
+            "hyprgrab_{}_{}.{}",
+            args.video ? "cast" : "shot",
+            now,
+            args.video ? "mp4" : "png"
+    );
+
+    auto output_path = args.output_directory;
+    output_path.append(filename);
+    return output_path; 
+}
+
 void screenshot(const Args &args) {
-    exec_command(std::format("grim -g '{}' - | wl-copy", args.region));
+    // Save screenshot to output path
+    exec_command(std::format("grim -g '{}' {}", args.region, args.output_path.string()));
+
+    // Copy to clipboard
+    exec_command(std::format("wl-copy < {}", args.output_path.string()));
 }
 
 void screencast(const Args &args) {
@@ -176,6 +209,8 @@ int main(int argc, char *argv[]) {
 
     if (args.region == "")
         return 0;
+
+    args.output_path = get_output_path(args);
 
     // Execute the command
     if (args.video)
