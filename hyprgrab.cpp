@@ -7,7 +7,23 @@
 #include "json.hpp"
 using json = nlohmann::json;
 
-const char USAGE[] = "Usage: hyprgrab screenshot/screencast [flags]";
+const char USAGE[] = "Usage: hyprgrab screenshot|screencast [options]";
+const char HELP[] = R"(Usage: hyprgrab screenshot|screencast [options]
+
+Hyprgrab is a small utility program to easily capture the screen in Hyprland.
+
+It will use hyprctl and slurp for region selection, then grim or wl-screenrec
+to take the screenshot or record the screen.
+
+Options:
+  -h        show this help message
+  -m        one of: output, window, region
+
+Modes:
+  output:   take screenshot of an entire monitor (default)
+  window:   take screenshot of an open window
+  region:   take screenshot of selected region
+)";
 
 void error(const std::string &msg) {
     std::cerr << msg << std::endl;
@@ -30,7 +46,7 @@ std::string exec_command(const std::string &command) {
     }
     return result.substr(0, result.size() - 1);
 }
-
+    
 enum RegionMode {
     OUTPUT,
     WINDOW,
@@ -64,6 +80,9 @@ Args parse_args(int argc, char *argv[]) {
         args.video = false;
     } else if (mode == "screencast") {
         args.video = true;
+    } else if (mode == "-h") {
+        std::cout << HELP;
+        exit(0);
     } else {
         error("Invalid mode. Valid values are: screenshot, screencast");
     }
@@ -85,6 +104,12 @@ Args parse_args(int argc, char *argv[]) {
                 else if (arg == "region") args.regionMode = REGION;
                 else error(std::format("Unknown region mode '{}'", arg));
                 break;
+            }
+
+            case 'h': {
+                // Show help and exit
+                std::cout << HELP;
+                exit(0);
             }
 
             default: error(std::format("Unknown flag '{}'", flag));
