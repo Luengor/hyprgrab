@@ -46,7 +46,7 @@ void error(const std::string &msg) {
 }
 
 std::string exec_command(const std::string &command) {
-    std::array<char, 4096> buffer;
+    static std::array<char, 4096> buffer;
     std::string result;
     std::unique_ptr<FILE, void (*)(FILE *)> pipe(
         popen(command.c_str(), "r"),
