@@ -106,10 +106,10 @@ Args parse_args(int argc, char *argv[]) {
         error(USAGE);
 
     const auto mode = std::string(argv[1]);
-    if (mode == "screenshot") {
+    if (mode == "screenshot" || mode == "shot") {
         args.video = false;
         args.output_directory = "~/Pictures";
-    } else if (mode == "screencast") {
+    } else if (mode == "screencast" || mode == "cast") {
         args.video = true;
         args.output_directory = "~/Videos";
     } else if (mode == "-h") {
