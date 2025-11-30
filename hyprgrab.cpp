@@ -64,8 +64,13 @@ std::string exec_command(const std::string &command) {
     return result;
 }
 
-void notify(const std::string &msg) {
-    std::string cmd = std::format("notify-send 'Hyprgrab' '{}'", msg);
+void notify(const std::string &msg, int expire=0) {
+    std::string cmd;
+    if (expire > 0)
+        cmd = std::format("notify-send -t {} 'Hyprgrab' '{}'", expire, msg);
+    else 
+        cmd = std::format("notify-send 'Hyprgrab' '{}'", msg);
+
     exec_command(cmd);
 }
 
@@ -247,8 +252,10 @@ std::filesystem::path get_output_path(const Args &args) {
 
 void screenshot(const Args &args) {
     // Sleep if needed
-    if (args.delay_seconds > 0)
+    if (args.delay_seconds > 0) {
+        notify(std::format("Sleeping for {} seconds...", args.delay_seconds), args.delay_seconds * 1000 - 100);
         sleep(args.delay_seconds);
+    }
 
     // Save screenshot to output path
     exec_command(
