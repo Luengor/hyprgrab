@@ -1,6 +1,6 @@
-# Maintainer: luengor <luengor@lueng.org>
+# Maintainer: luengor <luengor at lueng dot org>
 pkgname="hyprgrab"
-pkgver=19fd51d
+pkgver=e6442d0
 pkgrel=1
 pkgdesc="A screenshot and screen recording tool for Hyprland"
 arch=('x86_64')
