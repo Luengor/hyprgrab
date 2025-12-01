@@ -20,12 +20,12 @@ pkgver() {
 }
 
 build() {
-    cd "$srcdir/$_basename" || exit
-    make
+  cd "$srcdir/$_basename" || exit
+  make
 }
 
 package() {
-    cd "$srcdir/$_basename" || exit
-    mkdir -p "$pkgdir/usr/bin"
-    make INSTALL_DIR="$pkgdir/usr/bin" install
+  cd "$srcdir/$_basename" || exit
+  mkdir -p "$pkgdir/usr/bin"
+  make INSTALL_DIR="$pkgdir/usr/bin" install
 }
