@@ -1,7 +1,7 @@
 # Maintainer: luengor <luengor at lueng dot org>
 _basename='hyprgrab'
 pkgname="$_basename-git"
-pkgver=7c86178
+pkgver=r35.7c86178
 pkgrel=1
 pkgdesc="A screenshot and screen recording tool for Hyprland"
 arch=('x86_64')
@@ -16,7 +16,10 @@ sha256sums=('SKIP')
 
 pkgver() {
   cd "$srcdir/$_basename" || exit
-  git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD
+  ( set -o pipefail
+    git describe --long --abbrev=7 2>/dev/null | sed 's/\([^-]*-g\)/r\1/;s/-/./g' ||
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+  )
 }
 
 build() {
