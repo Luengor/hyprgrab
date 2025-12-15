@@ -74,6 +74,27 @@ void notify(const std::string &msg, int expire=0) {
     exec_command(cmd);
 }
 
+bool another_running() {
+    // Get process list
+    std::string cmd = std::format("pgrep -x hyprgrab");
+    std::string output = exec_command(cmd);
+
+    // Get my own PID
+    pid_t my_pid = getpid();
+
+    for (const auto &line : std::views::split(output, '\n')) {
+        std::string pid_str(line.begin(), line.end());
+        if (pid_str.empty())
+            continue;
+
+        pid_t pid = static_cast<pid_t>(std::stoi(pid_str));
+        if (pid != my_pid)
+            return true;
+    }
+
+    return false;
+}
+
 enum RegionMode { OUTPUT, WINDOW, REGION };
 
 struct Args {
@@ -290,6 +311,11 @@ void screencast(const Args &args) {
 }
 
 int main(int argc, char *argv[]) {
+    // Check if another instance with the same argv[0] is running
+    if (another_running()) {
+        error("Another instance of hyprgrab is already running.");
+    }
+
     // Get the args and region and things
     Args args = parse_args(argc, argv);
     args.region = get_region(args);
