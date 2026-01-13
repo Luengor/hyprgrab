@@ -279,8 +279,8 @@ void screenshot(const Args &args) {
     }
 
     // Save screenshot to output path
-    exec_command(
-        std::format("grim -g '{}' {}", args.region, args.output_path.string()));
+    exec_command(std::format("grim -g '{}' - | magick - -shave 1x1 '{}'",
+                             args.region, args.output_path.string()));
 
     // Copy to clipboard
     exec_command(std::format("wl-copy < {}", args.output_path.string()));
